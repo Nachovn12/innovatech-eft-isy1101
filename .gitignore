@@ -4,6 +4,9 @@
 .env.local
 *.env
 
+# Excepción: sí queremos versionar la plantilla de ejemplo
+!.env.example
+
 # Binarios y carpetas de compilación Maven
 target/
 **/target/
