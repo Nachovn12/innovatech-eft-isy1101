@@ -62,9 +62,9 @@ services:
   frontend:
     build:
       context: ./front_despacho
-      args:
-        VITE_API_VENTAS_URL: http://localhost:8080
-        VITE_API_DESPACHOS_URL: http://localhost:8081
+    environment:
+      - VITE_API_VENTAS_URL=http://localhost:8080
+      - VITE_API_DESPACHOS_URL=http://localhost:8081
     container_name: innovatech-frontend
     restart: unless-stopped
     ports:

@@ -1,0 +1,29 @@
+{
+  "family": "innovatech-frontend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::112483261942:role/LabRole",
+  "taskRoleArn": "arn:aws:iam::112483261942:role/LabRole",
+  "containerDefinitions": [
+    {
+      "name": "innovatech-frontend",
+      "image": "112483261942.dkr.ecr.us-east-1.amazonaws.com/innovatech-frontend:latest",
+      "portMappings": [{"containerPort": 80, "protocol": "tcp"}],
+      "environment": [
+        {"name": "VITE_API_VENTAS_URL", "value": "http://34.239.151.105:8080"},
+        {"name": "VITE_API_DESPACHOS_URL", "value": "http://3.85.245.248:8081"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/innovatech-frontend",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}

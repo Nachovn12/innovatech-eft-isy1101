@@ -4,15 +4,14 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-ARG VITE_API_VENTAS_URL
-ARG VITE_API_DESPACHOS_URL
-ENV VITE_API_VENTAS_URL=$VITE_API_VENTAS_URL
-ENV VITE_API_DESPACHOS_URL=$VITE_API_DESPACHOS_URL
 RUN npm run build
 
 # --- Etapa 2: runtime ---
 FROM nginx:1.27-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 EXPOSE 80
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
