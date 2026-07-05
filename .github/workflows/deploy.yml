@@ -1,0 +1,170 @@
+name: Deploy Innovatech Chile a AWS ECS
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 112483261942.dkr.ecr.us-east-1.amazonaws.com
+  ECS_CLUSTER: innovatech-cluster
+
+jobs:
+  deploy-ventas:
+    name: Build, Test y Deploy - Ventas
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: back-Ventas_SpringBoot/Springboot-API-REST
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Correr tests unitarios (H2)
+        run: ./mvnw test
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login en Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build y push imagen Docker
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/innovatech-ventas:$IMAGE_TAG -t $ECR_REGISTRY/innovatech-ventas:latest .
+          docker push $ECR_REGISTRY/innovatech-ventas:$IMAGE_TAG
+          docker push $ECR_REGISTRY/innovatech-ventas:latest
+
+      - name: Renderizar nueva Task Definition
+        id: render-ventas
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ecs-taskdefs/taskdef-ventas.json
+          container-name: innovatech-ventas
+          image: ${{ env.ECR_REGISTRY }}/innovatech-ventas:${{ github.sha }}
+
+      - name: Deploy a ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-ventas.outputs.task-definition }}
+          service: innovatech-ventas-svc
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+  deploy-despachos:
+    name: Build, Test y Deploy - Despachos
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Correr tests unitarios (H2)
+        run: ./mvnw test
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login en Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build y push imagen Docker
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/innovatech-despachos:$IMAGE_TAG -t $ECR_REGISTRY/innovatech-despachos:latest .
+          docker push $ECR_REGISTRY/innovatech-despachos:$IMAGE_TAG
+          docker push $ECR_REGISTRY/innovatech-despachos:latest
+
+      - name: Renderizar nueva Task Definition
+        id: render-despachos
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ecs-taskdefs/taskdef-despachos.json
+          container-name: innovatech-despachos
+          image: ${{ env.ECR_REGISTRY }}/innovatech-despachos:${{ github.sha }}
+
+      - name: Deploy a ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-despachos.outputs.task-definition }}
+          service: innovatech-despachos-svc
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+  deploy-frontend:
+    name: Build y Deploy - Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: front_despacho
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login en Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build y push imagen Docker
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --build-arg VITE_API_VENTAS_URL=${{ vars.VITE_API_VENTAS_URL }} \
+            --build-arg VITE_API_DESPACHOS_URL=${{ vars.VITE_API_DESPACHOS_URL }} \
+            -t $ECR_REGISTRY/innovatech-frontend:$IMAGE_TAG -t $ECR_REGISTRY/innovatech-frontend:latest .
+          docker push $ECR_REGISTRY/innovatech-frontend:$IMAGE_TAG
+          docker push $ECR_REGISTRY/innovatech-frontend:latest
+
+      - name: Renderizar nueva Task Definition
+        id: render-frontend
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ecs-taskdefs/taskdef-frontend.json
+          container-name: innovatech-frontend
+          image: ${{ env.ECR_REGISTRY }}/innovatech-frontend:${{ github.sha }}
+
+      - name: Deploy a ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-frontend.outputs.task-definition }}
+          service: innovatech-frontend-svc
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
