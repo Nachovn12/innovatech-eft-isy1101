@@ -12,8 +12,8 @@
       "image": "112483261942.dkr.ecr.us-east-1.amazonaws.com/innovatech-frontend:latest",
       "portMappings": [{"containerPort": 80, "protocol": "tcp"}],
       "environment": [
-        {"name": "VITE_API_VENTAS_URL", "value": "http://34.239.151.105:8080"},
-        {"name": "VITE_API_DESPACHOS_URL", "value": "http://3.85.245.248:8081"}
+        {"name": "VITE_API_VENTAS_URL", "value": "http://innovatech-alb-1599498572.us-east-1.elb.amazonaws.com"},
+        {"name": "VITE_API_DESPACHOS_URL", "value": "http://innovatech-alb-1599498572.us-east-1.elb.amazonaws.com"}
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
